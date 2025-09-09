@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Classes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .certificate {
+            display: none;
+            border: 2px solid #4b5e7e;
+            padding: 24px;
+            text-align: center;
+            background: linear-gradient(to bottom, #f7fafc, #e2e8f0);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .certificate.show {
+            display: block;
+        }
+        .sidebar {
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease;
+            background: #ffffff;
+            border-right: 1px solid #e2e8f0;
+        }
+        .sidebar.hidden {
+            transform: translateX(-100%);
+        }
+        .locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background-color: #e2e8f0 !important;
+        }
+        .video-item {
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .video-item:hover:not(.locked) {
+            transform: translateX(4px);
+        }
+        .progress-bar {
+            transition: width 0.5s ease-in-out;
+        }
+        .button {
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .button:hover {
+            transform: scale(1.05);
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100%;
+                z-index: 30;
+                box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex min-h-screen">
+        <!-- Sidebar: Syllabus -->
+        <div id="sidebar" class="sidebar md:w-80 w-3/4 bg-white p-6 md:sticky md:top-0 h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Course Syllabus</h2>
+                <button id="closeSidebar" class="md:hidden text-3xl text-gray-600 hover:text-gray-900">&times;</button>
+            </div>
+            <ul id="videoList" class="space-y-3">
+                <li class="video-item cursor-pointer p-3 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center space-x-2" data-video-id="D3VnE2ntRYE" data-index="0">
+                    <span class="text-blue-600">🎵</span><span>Introduction to Music Theory</span>
+                </li>
+                <li class="video-item cursor-pointer p-3 bg-gray-100 hover:bg-gray-200 rounded-lg locked flex items-center space-x-2" data-video-id="NmqBE_C52j8" data-index="1">
+                    <span class="text-blue-600">🎸</span><span>Basic Guitar Chords</span>
+                </li>
+                <li class="video-item cursor-pointer p-3 bg-gray-100 hover:bg-gray-200 rounded-lg locked flex items-center space-x-2" data-video-id="fSrw0uMS-TQ" data-index="2">
+                    <span class="text-blue-600">🥁</span><span>Rhythm and Timing</span>
+                </li>
+            </ul>
+            <div class="mt-6 border-t pt-4">
+                <h3 class="text-lg font-semibold text-gray-900">Course Details</h3>
+                <p class="text-sm text-gray-600">Duration: 3 Weeks</p>
+                <p class="text-sm text-gray-600">Level: Beginner</p>
+                <p class="text-sm text-gray-600">Instructor: John Doe</p>
+            </div>
+        </div>
+
+        <!-- Main Content: Video and Progress -->
+        <div class="md:w-3/4 w-full p-4 md:p-8">
+            <button id="openSidebar" class="md:hidden mb-6 bg-blue-600 text-white px-4 py-2 rounded-lg button">Open Syllabus</button>
+            <h1 class="text-4xl font-extrabold mb-6 text-gray-900">Music Classes Playlist</h1>
+            <div id="videoPlayer" class="video-container mb-6">
+                <div id="player"></div>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-4 text-gray-900">Course Progress</h2>
+                <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div id="progressBar" class="progress-bar bg-blue-600 h-4 rounded-full" style="width: 0%"></div>
+                </div>
+                <p id="progressText" class="text-sm mt-2 text-gray-700">0% Complete</p>
+                <div id="certificate" class="certificate mt-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Certificate of Completion</h2>
+                    <p class="text-gray-700">Congratulations! You have completed the Music Classes Course.</p>
+                    <button class="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg button hover:bg-blue-700" onclick="downloadCertificate()">Download Certificate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulated user login and payment status
+        const user = { isLoggedIn: true, hasPaid: true };
+
+        // Video data with real YouTube IDs
+        const videos = [
+            { id: 'D3VnE2ntRYE', title: 'Introduction to Music Theory', watched: false },
+            { id: 'NmqBE_C52j8', title: 'Basic Guitar Chords', watched: false },
+            { id: 'fSrw0uMS-TQ', title: 'Rhythm and Timing', watched: false }
+        ];
+
+        // Check user access
+        if (!user.isLoggedIn || !user.hasPaid) {
+            document.body.innerHTML = '<div class="flex items-center justify-center h-screen"><h1 class="text-center text-3xl font-bold text-gray-900">Please log in and purchase the course to access the content.</h1></div>';
+        } else {
+            // Initialize elements
+            let player;
+            const videoItems = document.querySelectorAll('.video-item');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const certificate = document.getElementById('certificate');
+            const sidebar = document.getElementById('sidebar');
+            const openSidebarBtn = document.getElementById('openSidebar');
+            const closeSidebarBtn = document.getElementById('closeSidebar');
+
+            // Load watched videos from localStorage
+            const watchedVideos = JSON.parse(localStorage.getItem('watchedVideos')) || [];
+            videos.forEach((video, index) => {
+                if (watchedVideos.includes(video.id)) {
+                    video.watched = true;
+                    document.querySelector(`.video-item[data-index="${index}"]`).classList.remove('locked');
+                    document.querySelector(`.video-item[data-index="${index}"]`).classList.add('bg-green-100');
+                }
+            });
+
+            // Initialize YouTube player
+            function onYouTubeIframeAPIReady() {
+                player = new YT.Player('player', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: videos[0].id,
+                    playerVars: {
+                        'playsinline': 1,
+                        'controls': 1,
+                        'rel': 0
+                    },
+                    events: {
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+            }
+
+            // Track video completion
+            function onPlayerStateChange(event) {
+                if (event.data === YT.PlayerState.ENDED) {
+                    const currentVideoId = player.getVideoData().video_id;
+                    const index = videos.findIndex(video => video.id === currentVideoId);
+                    if (index !== -1 && !videos[index].watched) {
+                        videos[index].watched = true;
+                        const item = document.querySelector(`.video-item[data-index="${index}"]`);
+                        item.classList.remove('locked');
+                        item.classList.add('bg-green-100');
+                        watchedVideos.push(currentVideoId);
+                        localStorage.setItem('watchedVideos', JSON.stringify(watchedVideos));
+                        updateVideoAccess();
+                        updateProgress();
+                    }
+                }
+            }
+
+            // Prevent direct access to locked videos
+            function updateVideoAccess() {
+                videoItems.forEach((item, index) => {
+                    if (index === 0 || videos[index - 1].watched) {
+                        item.classList.remove('locked');
+                    } else {
+                        item.classList.add('locked');
+                    }
+                });
+            }
+
+            // Smooth progress update
+            function updateProgress() {
+                const watchedCount = videos.filter(v => v.watched).length;
+                const progress = (watchedCount / videos.length) * 100;
+                progressBar.style.width = `${progress}%`;
+                progressText.textContent = `${Math.round(progress)}% Complete`;
+                if (progress === 100) {
+                    certificate.classList.add('show');
+                }
+            }
+
+            // Video click handler
+            videoItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    if (item.classList.contains('locked')) return; // Block locked videos
+                    const videoId = item.getAttribute('data-video-id');
+                    player.loadVideoById(videoId);
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.add('hidden');
+                    }
+                });
+            });
+
+            // Download certificate
+            function downloadCertificate() {
+                const link = document.createElement('a');
+                link.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent('Certificate of Completion\nMusic Classes Course\nAwarded to: [User Name]\nDate: September 09, 2025');
+                link.download = 'certificate.txt';
+                link.click();
+            }
+
+            // Sidebar toggle for mobile
+            openSidebarBtn.addEventListener('click', () => {
+                sidebar.classList.remove('hidden');
+            });
+            closeSidebarBtn.addEventListener('click', () => {
+                sidebar.classList.add('hidden');
+            });
+
+            // Prevent direct access via URL manipulation
+            window.addEventListener('load', () => {
+                const currentVideoId = player ? player.getVideoData().video_id : videos[0].id;
+                const index = videos.findIndex(video => video.id === currentVideoId);
+                if (index > 0 && !videos[index - 1].watched) {
+                    player.loadVideoById(videos[0].id); // Force load first unwatched video
+                }
+            });
+
+            // Initial setup
+            updateVideoAccess();
+            updateProgress();
+        }
+    </script>
+</body>
+</html>
